@@ -2,7 +2,7 @@
 
 Ce projet à pour but de réaliser un interpréteur pour clavier. Il pourra servir directement en tant que firmware dans un clavier physique, où alors dans en temps qu'interpréteur dans un ordinateur (en tant que remplaçant de xkb sous linux, par exemple).
 
-Il prendra en entrée des appuie et des relachement de touches, et en sortie il génèrera des suites de caractères.
+Il prendra en entrée des appuis et des relachements de touches, et en sortie il génèrera des suites de caractères.
 
 ## État d'avancement ##
 
