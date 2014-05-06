@@ -1,7 +1,65 @@
 # Ergonomic Keyboard #
 
-## Goal ##
-to do: 
+Ce projet à pour but de réaliser un interpréteur pour clavier. Il pourra servir directement en tant que firmware dans un clavier physique, où alors dans en temps qu'interpréteur dans un ordinateur (en tant que remplaçant de xkb sous linux, par exemple).
 
-## Source code ##
-to do: organisation
+## État d'avancement ##
+
+Actuellement le code dans ce repository n'est pas du tout à jour par rapport à cette documentation (et non l'inverse comme dans pas mal de projet !).
+
+## Fonctionnalité voulus ##
+
+NB : une action désigne ce qui peux être fait lorsque l'on appuie sur une touche.
+
+Voici ce qui peut générer une action :
+- le changement d'état d'une touche (l'appuie ou le relâchement)
+- un appui multiple sur une touche (nombre de répétition configurable)
+- un appui long sur une touche (temps configurable)
+- de plus un appuie sur plusieurs touches simultanément (frappe en [accords](https://fr.wikipedia.org/wiki/Clavier_accord)) remplace l'action de la dernière touche ayant changé d'état par une autre action de type accord.
+
+Les touches pourront également :
+- être verrouillé pour simuler appuie constant
+- simuler un appuie jusqu'à la prochaine touche (le comportement des [touches mortes](https://fr.wikipedia.org/wiki/Touche_morte), mais tout en gardant la possibilité de générer une action lors de l'appuie initial sur la touche).
+
+Voici ce qui peut être fait avec une action :
+- écrire un où plusieurs caractères, y compris accentués
+- générer des macros (et donc lancer des commandes, tel que lancer un logiciel à l'aide de raccourcis clavier).
+- allumer où éteindre des LEDs
+- rien du tout (cas d'une touche de macro non affecté)
+- …
+
+Et de manière générale, ce projet devra :
+- Permettre de générer touts les symboles d'un clavier 104 et 105 touches en azerty/qwerty/[bépo](http://bepo.fr/wiki/Accueil) afin de valider son fonctionnement. Il ne devra pas y avoir de problème pour porter d'autre dispositions.
+- Modifiable durant l'exécution
+- Dans le cas de l'utilisation en tant que firmware pour clavier physique, une disposition devra pouvoir être la plus indépendante quelque-soit le mappage dans l'ordinateur cible (exemple : le clavier en bépo, et l'ordinateur en azerty).
+
+## Explication générale ##
+
+Les termes en gras correspondent à ceux qui sont utilisés dans le code.
+
+Un clavier est composé de touches. Chacune de ces touches physiques possède un *keycode* unique afin de pouvoir les identifier. Une touche peut être enfoncée où relâchée (c'est un *event*). 
+Sur un clavier, il y a différentes couches (*layer*). Par exemple, sur un clavier classique, il y a une couche alphabétique, une couche majuscule, une couche altgr, une couche altgr+maj,… Ces couches ne recouvrent pas forcément tout le clavier, et plusieurs couches qui se superposent ne doivent pas forcément recouvrir les mêmes touches. Par exemples les pavés numériques ont en général deux couches : une avec des flèches directionnelles et une avec des chiffres. De même, les touches de fonctions (F1, F2,… F12) ont souvent également une couche multimédia (souvent accessible avec la touche Fn). Chaque touche est recouverte par un nombre quelconque de couches. Ces couches ont chacune un niveau de priorité unique.
+Lors d'un *event* (provenant de l'appui où du relâchement d'une touche), chacune des couches sont interrogées par ordre de priorité jusqu'à ce qu'un couche gère cette touche. Cela ce produit quand une couche est active, et que la touche se situe à l’intérieur de la couche.
+Dans la couche gérant l'*event*, s'il n'y a que la touche ayant provoqué cet *event* qui est active, on exécute la fonction correspondant à cette touche (*Set* où *Reset*). Si il y plusieurs touches enfoncées, on active la fonction correspondant à cette frappe en accord (*keyChord*) de la touche ayant le keycode le plus petit (pour ne pas avoir de duplication de code), et en spécifiant le nombre de touches impliqué (il peut être supérieur à 2). Un exemple de frappe en accord pourrait être l'appui simultané sur la touche majuscule et une lettre, ou alors certains coups spéciaux dans les jeux de combats. Ce [clavier](http://asetniop.com/) est entièrement basé sur la frappe en accord.
+À chaque combinaison *keycode/layer/keyChord* est associé une fonction. Dans la plupart des cas ces fonctions sont juste un caractère à émettre («a», «w», «!», «ě», «ñ», «ĳ»,…). Dans certains cas, il peut s'agir d'action plus complexes tel que des macros ou encore une LED à allumer (celle de verrouiller majuscule où du pavé numérique par exemple).
+Les caractères émis sont enfin analyser afin de générer la suite de touches correspondant. Celà permet deux cas d'usage. Tout d'abord dans le cas d'une utilisation dans un clavier externe, cela permet de s'affranchir des limitations du mappage de l'ordinateur (par exemple si l'ordinateur est en azerty, un «É» pourra être généré à l'aide de «alt» maintenu enfoncé, puis «1» «4» «4» – voir [alt codes](https://fr.wikipedia.org/wiki/Alt_codes) pour plus de détails). Seul cette partie serait à changer en cas de changer d'ordinateur (par exemple le «a» n'a pas la même place en azerty et en qwerty). De plus, cela permet de générer des raccourcis clavier complexes tel que ce que l'on peux faire avec la commande « map » de vim, où encore les raccourcis du type « ctrl » + « d » + « e » (qui pourrait par exemples correspondre à des macros).
+
+Les touches sont gérées de la même façon que les couches pour une raison d'unicité. Elles peuvent être enfoncées (*set*) et relâché (*reset*), verouillé (*lock*) et déverrouillé (*unlock*), rester enfoncé jusqu'au prochain appui sur une autre touche (*latch*), être enfoncé pendant longtemps (*longpress*) avec ce temps configurable, ou être appuyé plusieurs fois d'affilé (*multitap*) avec le nombre de fois requis configurable (typiquement 2 où 3).
+
+# Remarques diverses #
+
+## Roadmap ##
+
+Ce projet est un projet personnel. Je m'en occupe quand j'ai du temps, et son rythme d'avancement peut donc varier très fortement selon mon temps de libre.
+Dans un premier temps, je souhaite coder toutes les fonctionnalités décrit, puis je commencerais à l'optimiser (à la fois pour l'impact mémoire qui tel quel risque d'être élevé, et pour la vitesse d'exécution).
+
+## Langage ##
+
+Ce projet sera certainement rédigé en C où en C++, selon la disponibilité du C++ des compilateurs sur les architectures cibles. Les fichiers de configuration seront dans un premier temps également en C où C++.
+
+## Langue ##
+
+Dans un premier temps, ce projet sera en français, de manière à me permettre de réaliser rapidement un brouillon, puis il sera entièrement traduit en anglais.
+
+## Orthographe et grammaire ##
+
+Je m'excuse d'avance pour les amoureux de la langue française pour mes nombreuses fautes d'orthographe. Je les corrigerais dès que possible, mais je vous remercierait de ne pas me mettre sur échaffaut trop tôt <sourire timide>.
